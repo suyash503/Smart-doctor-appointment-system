@@ -13,11 +13,8 @@ app = FastAPI(title="Smart Doctor Assistant API")
 # --- 2. Add this CORS block right after creating the 'app' ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://smart-doctor-ai.vercel.app", # Your live Vercel frontend
-        "http://localhost:5173"               # Keep this so local testing still works
-    ],
-    allow_credentials=True,
+    allow_origins=["*"], 
+    allow_credentials=False, # <--- Change this to False
     allow_methods=["*"],
     allow_headers=["*"],
 )
