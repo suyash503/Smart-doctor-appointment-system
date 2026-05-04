@@ -30,7 +30,7 @@ function App() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('https://smart-doctor-appointment-system.onrender.com/chat/', {
+      const response = await fetch('https://smart-doctor-appointment-system.onrender.com/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
