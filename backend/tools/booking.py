@@ -15,7 +15,7 @@ def book_appointment(appointment: schemas.AppointmentCreate, db: Session = Depen
     new_appointment = models.Appointment(
         patient_id=appointment.patient_id,
         doctor_id=appointment.doctor_id,
-        time=appointment.appointment_time,
+        appointment_time=appointment.appointment_time,
         symptoms=appointment.symptoms,
         status="booked"
     )
