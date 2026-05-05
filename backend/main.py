@@ -10,10 +10,13 @@ app = FastAPI(title="Smart Doctor Assistant API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      
-    allow_credentials=False,  
-    allow_methods=["*"],      
-    allow_headers=["*"],      
+    allow_origins=[
+        "https://smart-doctor-ai.vercel.app",
+        "https://smart-doctor-likeko96f-suyashs-projects-9cc08d7d.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(booking.router)
