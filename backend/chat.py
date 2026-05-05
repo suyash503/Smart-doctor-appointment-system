@@ -126,7 +126,7 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
             elif tool_call.function.name == "book_appointment":
                 # We format the AI's arguments into our strict Pydantic schema
                 appointment_data = schemas.AppointmentCreate(**args)
-                db_record = book_appointment(appointment_data=appointment_data, db=db)
+                db_record = book_appointment(appointment=appointment_data, db=db)
                 # Convert the database object to a dictionary so we can send it back to Groq
                 tool_result = {
                     "id": db_record.id,
