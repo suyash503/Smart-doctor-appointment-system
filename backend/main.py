@@ -1,30 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.database import engine, Base
-from tools import booking, querying # <-- Import the new file here
+from tools import booking, querying
 import chat
 
-
-# Create the database tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Smart Doctor Assistant API")
 
-# --- 2. Add this CORS block right after creating the 'app' ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=False, # <--- Change this to False
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],      
+    allow_credentials=False,  
+    allow_methods=["*"],      
+    allow_headers=["*"],      
 )
 
-# Register the tool routers
 app.include_router(booking.router)
-app.include_router(querying.router) # <-- Register the new router here
+app.include_router(querying.router)
 app.include_router(chat.router)
 
 
 @app.get("/")
 def read_root():
-    return {"message": "Doctor Assistant API is running!"}
+    return {"message": "Doctor Assistant API is running and CORS is fully open!"}
