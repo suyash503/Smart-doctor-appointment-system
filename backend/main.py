@@ -11,6 +11,7 @@ app = FastAPI(title="Smart Doctor Assistant API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:5173",
         "https://smart-doctor-ai.vercel.app",
 "https://smart-doctor-likeko96f-suyashs-projects-9cc08d7d.vercel.app"
     ],
