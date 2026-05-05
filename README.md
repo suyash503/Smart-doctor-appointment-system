@@ -35,3 +35,23 @@ To run this project locally with full Google Calendar integration:
 1. **Clone the repository:**
    ```bash
    git clone [https://github.com/suyash503/Smart-Doctor-Appointment-System.git](https://github.com/suyash503/Smart-Doctor-Appointment-System.git)
+
+2. Backend Setup:
+
+Bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+pip install -r requirements.txt
+
+*Add your Groq API key to a `.env` file.*
+   *Start the server:* `uvicorn main:app --reload`
+
+3. **Frontend Setup:**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+
+   👤 Author
+Suyash 
