@@ -1,41 +1,53 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database.database import get_db
-import database.models as models
+from database import models
 from schemas import schemas
+from tools.google_cal import get_calendar_service
+from datetime import datetime, timedelta
 
-# APIRouter lets us group related tools together
-router = APIRouter(prefix="/tools/booking", tags=["Booking Tools"])
+router = APIRouter()
 
 @router.post("/book", response_model=schemas.AppointmentResponse)
-def book_appointment(
-    appointment_data: schemas.AppointmentCreate,  
-    db: Session = Depends(get_db)
-):
-    """
-    MCP Tool: Books a new appointment for a patient.
-    The LLM will read this exact description to understand when and how to use this tool!
-    """
-    # 1. Verify the doctor exists in the database
-    doctor = db.query(models.Doctor).filter(models.Doctor.id == appointment_data.doctor_id).first()
-    if not doctor:
-        # If the LLM hallucinates a doctor ID, we throw an error back to it
-        raise HTTPException(status_code=404, detail="Doctor not found. Please provide a valid doctor ID.")
-
-    # 2. Create the new appointment record using our SQLAlchemy model
+def book_appointment(appointment: schemas.AppointmentCreate, db: Session = Depends(get_db)):
+    
+    # 1. Your existing database logic
     new_appointment = models.Appointment(
-        patient_id=appointment_data.patient_id,
-        doctor_id=appointment_data.doctor_id,
-        appointment_time=appointment_data.appointment_time,
-        symptoms=appointment_data.symptoms,
+        patient_id=appointment.patient_id,
+        doctor_id=appointment.doctor_id,
+        time=appointment.time,
+        symptoms=appointment.symptoms,
         status="booked"
     )
-    
-    # 3. Save to the database
     db.add(new_appointment)
     db.commit()
-    db.refresh(new_appointment) # Grabs the newly generated ID assigned by the database
-    
-    # 4. Return the SQLAlchemy object 
-    # (FastAPI automatically filters it through our Pydantic AppointmentResponse schema)
+    db.refresh(new_appointment)
+
+    # 2. NEW: Google Calendar Logic
+    try:
+        service = get_calendar_service()
+        
+       
+        start_time = datetime.fromisoformat(str(appointment.time).replace("Z", ""))
+        end_time = start_time + timedelta(hours=1) # Assume 1 hour appointments
+
+        event = {
+            'summary': f'Doctor Appointment (Patient ID: {appointment.patient_id})',
+            'description': f'Symptoms reported: {appointment.symptoms}',
+            'start': {
+                'dateTime': start_time.isoformat(),
+                'timeZone': 'Asia/Kolkata',
+            },
+            'end': {
+                'dateTime': end_time.isoformat(),
+                'timeZone': 'Asia/Kolkata',
+            },
+        }
+
+        event_result = service.events().insert(calendarId='primary', body=event).execute()
+        print(f"SUCCESS: Calendar event created: {event_result.get('htmlLink')}")
+        
+    except Exception as e:
+        print(f"WARNING: Database saved, but Google Calendar failed: {e}")
+
     return new_appointment
