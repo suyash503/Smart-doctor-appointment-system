@@ -11,7 +11,7 @@ app = FastAPI(title="Smart Doctor Assistant API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://smart-doctor-ai.vercel.app",
+        "https://smart-doctor-appointment-system-dqh0.onrender.com/",
         "https://smart-doctor-likeko96f-suyashs-projects-9cc08d7d.vercel.app"
     ],
     allow_credentials=True,
