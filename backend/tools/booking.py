@@ -15,7 +15,7 @@ def book_appointment(appointment: schemas.AppointmentCreate, db: Session = Depen
     new_appointment = models.Appointment(
         patient_id=appointment.patient_id,
         doctor_id=appointment.doctor_id,
-        time=appointment.appointment.time,
+        time=appointment.appointment_time,
         symptoms=appointment.symptoms,
         status="booked"
     )
@@ -28,7 +28,7 @@ def book_appointment(appointment: schemas.AppointmentCreate, db: Session = Depen
         service = get_calendar_service()
         
        
-        start_time = datetime.fromisoformat(str(appointment.appointment.time).replace("Z", ""))
+        start_time = datetime.fromisoformat(str(appointment.appointment_time).replace("Z", ""))
         end_time = start_time + timedelta(hours=1) # Assume 1 hour appointments
 
         event = {
