@@ -32,6 +32,37 @@ class Appointment(Base):
     symptoms = Column(Text)
     status = Column(String, default="booked")
 
+class MedicalRecord(Base):
+    """Something a patient records about their own health."""
+    __tablename__ = "medical_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), index=True)
+    category = Column(String, index=True)
+    title = Column(String)
+    details = Column(Text)
+    recorded_on = Column(DateTime, default=datetime.now)
+
+    patient = relationship("User")
+
+class Prescription(Base):
+    """A medication a patient is taking or has taken."""
+    __tablename__ = "prescriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), index=True)
+    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=True)
+    medication = Column(String)
+    dosage = Column(String)
+    frequency = Column(String)
+    started_on = Column(DateTime, default=datetime.now)
+    ended_on = Column(DateTime, nullable=True)
+    status = Column(String, default="active")
+    notes = Column(Text, nullable=True)
+
+    patient = relationship("User")
+    doctor = relationship("Doctor")
+
 class ChatMessage(Base):
     """Stores the multi-turn conversation history."""
     __tablename__ = "chat_messages"

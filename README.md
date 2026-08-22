@@ -69,8 +69,47 @@ To register it with Claude Desktop, add this to your `claude_desktop_config.json
 }
 ```
 
-Tools: `list_doctors`, `list_patient_appointments`, `book_appointment`,
-`cancel_appointment`. Resource: `appointment://patient/{patient_id}/history`.
+Tools:
+
+| Tool | Does |
+| --- | --- |
+| `list_doctors` | every doctor and their specialty |
+| `list_patient_appointments` | a patient's appointments |
+| `book_appointment` | book a slot, rejecting clashes |
+| `cancel_appointment` | cancel by id |
+| `add_medical_record` | record a condition, allergy, surgery or note |
+| `list_medical_records` | read history, optionally by category |
+| `delete_medical_record` | remove an entry |
+| `add_prescription` | record a medication with dosage and frequency |
+| `list_prescriptions` | medications, optionally active only |
+| `stop_prescription` | mark a medication as no longer taken |
+
+Resource: `appointment://patient/{patient_id}/history`, which returns allergies,
+conditions, medications and appointments as one summary an LLM can read in a
+single call.
+
+## Medical history and prescriptions
+
+Patients build their own record, either by talking to the assistant or through
+the API directly:
+
+```
+POST   /records/history                        add a condition, allergy, surgery or note
+GET    /records/history/{patient_id}           read it back, filter with ?category=allergy
+DELETE /records/history/{record_id}            remove an entry
+POST   /records/prescriptions                  add a medication
+GET    /records/prescriptions/{patient_id}     list them, filter with ?active_only=true
+POST   /records/prescriptions/{id}/stop        mark a medication as stopped
+GET    /records/summary/{patient_id}           the whole record as readable text
+```
+
+History entries are one of four categories: `condition`, `allergy`, `surgery` or
+`note`. Prescriptions carry a dosage, a frequency and an optional prescribing
+doctor, and are never deleted, only stopped, so the record stays honest about
+what someone used to take.
+
+The assistant reads all of this before it answers, which is what makes the
+allergy list worth having.
 
 ## A note on access control
 
