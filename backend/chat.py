@@ -1,160 +1,106 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from groq import Groq
-import os
 import json
-from dotenv import load_dotenv
-from tools.querying import get_all_doctors, get_patient_appointments
-from tools.booking import book_appointment
-import schemas.schemas as schemas
 
-from database.database import get_db
+from fastapi import APIRouter, Depends
+from groq import AsyncGroq
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 import database.models as models
-
-# Import our actual tool functions 
-from tools.querying import get_all_doctors
-
-load_dotenv()
+from core.config import GROQ_API_KEY, GROQ_MODEL
+from database.database import get_db
+from mcp_client import ToolboxUnavailable, toolbox
 
 router = APIRouter(prefix="/chat", tags=["Agentic Chat"])
 
-# Initialize Groq Client
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = AsyncGroq(api_key=GROQ_API_KEY)
+
+SYSTEM_PROMPT = (
+    "You are a hospital scheduling assistant. Use your tools to look up doctors, "
+    "check appointments and make bookings, and never invent details you have not "
+    "looked up. Ask the patient for anything a tool needs and you do not have, such "
+    "as their patient id or a preferred time. Report tool errors back to the patient "
+    "in plain language."
+)
+
+MAX_TOOL_ROUNDS = 4
+
 
 class ChatRequest(BaseModel):
     session_id: str
     message: str
 
-# Groq/OpenAI Tool Schema format
-GROQ_TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_all_doctors",
-            "description": "Retrieves a list of all available doctors and their specialties.",
-            "parameters": {"type": "object", "properties": {}, "required": []}
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_patient_appointments",
-            "description": "Retrieves the appointment history for a specific patient.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "patient_id": {"type": "integer", "description": "The ID of the patient"}
-                },
-                "required": ["patient_id"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "book_appointment",
-            "description": "Books a new appointment for a patient.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "patient_id": {"type": "integer"},
-                    "doctor_id": {"type": "integer"},
-                    "appointment_time": {"type": "string", "description": "ISO format datetime string, e.g., 2026-05-10T10:00:00"},
-                    "symptoms": {"type": "string", "description": "Short description of symptoms"}
-                },
-                "required": ["patient_id", "doctor_id", "appointment_time", "symptoms"]
-            }
-        }
-    }
-]
 
-@router.post("/")
-def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
-    # --- 1. MEMORY: Fetch past conversation from the database ---
-    past_messages = db.query(models.ChatMessage).filter(
-        models.ChatMessage.session_id == request.session_id
-    ).order_by(models.ChatMessage.timestamp.asc()).all()
-
-    # Format history for Groq. We inject a System prompt first to guide the AI's behavior.
-    messages_for_groq = [
-        {"role": "system", "content": "You are a helpful hospital scheduling assistant. Always use your tools to look up doctors or appointments. Do not guess."}
-    ]
-    
-    # Add historical messages
-    for msg in past_messages:
-         messages_for_groq.append({"role": msg.role, "content": msg.content})
-    
-    # --- 2. Append the new user message ---
-    messages_for_groq.append({"role": "user", "content": request.message})
-    
-    # Save the user's message to the database
-    new_user_msg = models.ChatMessage(session_id=request.session_id, role="user", content=request.message)
-    db.add(new_user_msg)
-    db.commit()
-
-    # --- 3. THE LLM CALL: Ask Groq what to do ---
-    # We use Llama 3.1 70B, which is excellent at tool calling
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=messages_for_groq,
-        tools=GROQ_TOOLS,
-        tool_choice="auto"
+def load_history(db: Session, session_id: str):
+    stored = (
+        db.query(models.ChatMessage)
+        .filter(models.ChatMessage.session_id == session_id)
+        .order_by(models.ChatMessage.timestamp.asc())
+        .all()
     )
 
-    response_message = response.choices[0].message
+    return [{"role": message.role, "content": message.content} for message in stored]
 
-    # --- 4. TOOL EXECUTION LOOP ---
-    # Did Llama decide to use a tool?
-    if response_message.tool_calls:
-        # Append the AI's request to use the tool to the conversation history
-        messages_for_groq.append(response_message)
-        
-        for tool_call in response_message.tool_calls:
-            # We need to parse the arguments Groq sends us back into a Python dictionary
-            args = json.loads(tool_call.function.arguments)
-            
-            tool_result = None
-            
-            if tool_call.function.name == "get_all_doctors":
-                tool_result = get_all_doctors(db=db)
-                
-            elif tool_call.function.name == "get_patient_appointments":
-                # We pass the specific patient_id the AI extracted from the conversation
-                tool_result = get_patient_appointments(patient_id=args["patient_id"], db=db)
-                
-            elif tool_call.function.name == "book_appointment":
-                # We format the AI's arguments into our strict Pydantic schema
-                appointment_data = schemas.AppointmentCreate(**args)
-                db_record = book_appointment(appointment=appointment_data, db=db)
-                # Convert the database object to a dictionary so we can send it back to Groq
-                tool_result = {
-                    "id": db_record.id,
-                    "status": db_record.status,
-                    "time": str(db_record.appointment_time)
-                }
-                
-            # Send the result back to Groq
-            messages_for_groq.append({
+
+def remember(db: Session, session_id: str, role: str, content: str):
+    db.add(models.ChatMessage(session_id=session_id, role=role, content=content))
+    db.commit()
+
+
+async def run_tool_calls(conversation, tool_calls):
+    for tool_call in tool_calls:
+        try:
+            arguments = json.loads(tool_call.function.arguments or "{}")
+        except json.JSONDecodeError:
+            output = "The arguments for that tool were not valid JSON."
+        else:
+            output = await toolbox.call(tool_call.function.name, arguments)
+
+        conversation.append(
+            {
                 "role": "tool",
                 "tool_call_id": tool_call.id,
                 "name": tool_call.function.name,
-                "content": json.dumps(tool_result) 
-            })
-        
-        # 5c. Call Groq a second time with the database results so it can answer the user
-        second_response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages_for_groq
+                "content": output,
+            }
         )
-        final_text = second_response.choices[0].message.content
+
+
+@router.post("/")
+async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
+    conversation = [{"role": "system", "content": SYSTEM_PROMPT}]
+    conversation.extend(load_history(db, request.session_id))
+    conversation.append({"role": "user", "content": request.message})
+
+    remember(db, request.session_id, "user", request.message)
+
+    try:
+        tools = await toolbox.tool_specs()
+    except ToolboxUnavailable:
+        reply = "I cannot reach the appointment system right now, so I am unable to help with bookings."
+        remember(db, request.session_id, "assistant", reply)
+        return {"reply": reply}
+
+    reply = ""
+    for _ in range(MAX_TOOL_ROUNDS):
+        response = await client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=conversation,
+            tools=tools,
+            tool_choice="auto",
+        )
+        answer = response.choices[0].message
+
+        if not answer.tool_calls:
+            reply = answer.content or ""
+            break
+
+        conversation.append(answer)
+        await run_tool_calls(conversation, answer.tool_calls)
     else:
-        # Groq just wanted to chat normally
-        final_text = response_message.content
+        reply = "I could not finish that request. Could you try rephrasing it?"
 
-    # --- 6. Save Groq's final text answer to our database memory ---
-    new_ai_msg = models.ChatMessage(session_id=request.session_id, role="assistant", content=final_text)
-    db.add(new_ai_msg)
-    db.commit()
+    if not reply.strip():
+        reply = "Sorry, I did not manage to put an answer together. Could you say that again?"
 
-    return {"reply": final_text}
+    remember(db, request.session_id, "assistant", reply)
+    return {"reply": reply}

@@ -1,32 +1,72 @@
-import os.path
+import logging
+from datetime import timedelta
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']
+from core.config import CALENDAR_TIMEZONE, CREDENTIALS_FILE, TOKEN_FILE
 
-def get_calendar_service():
-    """Shows basic usage of the Google Calendar API.
-    Prints the start and name of the next 10 events on the user's calendar.
-    """
+logger = logging.getLogger(__name__)
+
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+
+APPOINTMENT_LENGTH = timedelta(hours=1)
+
+
+def get_calendar_service(allow_prompt=True):
     creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
 
-    return build('calendar', 'v3', credentials=creds)
+    if TOKEN_FILE.exists():
+        creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+
+    if creds and creds.valid:
+        return build("calendar", "v3", credentials=creds)
+
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    elif allow_prompt:
+        flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_FILE), SCOPES)
+        creds = flow.run_local_server(port=0)
+    else:
+        return None
+
+    TOKEN_FILE.write_text(creds.to_json())
+
+    return build("calendar", "v3", credentials=creds)
+
+
+def add_appointment_to_calendar(appointment):
+    if not TOKEN_FILE.exists():
+        logger.info("Skipping calendar sync, no Google token has been authorised yet.")
+        return None
+
+    try:
+        service = get_calendar_service(allow_prompt=False)
+        if service is None:
+            return None
+
+        start = appointment.appointment_time
+        event = {
+            "summary": f"Doctor appointment (patient {appointment.patient_id})",
+            "description": f"Symptoms reported: {appointment.symptoms}",
+            "start": {"dateTime": start.isoformat(), "timeZone": CALENDAR_TIMEZONE},
+            "end": {
+                "dateTime": (start + APPOINTMENT_LENGTH).isoformat(),
+                "timeZone": CALENDAR_TIMEZONE,
+            },
+        }
+
+        created = service.events().insert(calendarId="primary", body=event).execute()
+        logger.info("Created calendar event %s", created.get("htmlLink"))
+
+        return created
+    except Exception as error:
+        logger.warning("Appointment %s saved but calendar sync failed: %s", appointment.id, error)
+        return None
+
+
+if __name__ == "__main__":
+    get_calendar_service()
+    print(f"Google Calendar authorised, token saved to {TOKEN_FILE}")
