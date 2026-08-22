@@ -1,75 +1,48 @@
-# Smart Doctor
+# 🏥 Smart Doctor Appointment & Reporting Assistant
 
-A hospital scheduling assistant. Patients chat with an LLM that looks up doctors,
-reads appointment history and books visits through an MCP server.
+An intelligent, full-stack medical scheduling assistant powered by Agentic AI and the Model Context Protocol (MCP). This application allows patients to book appointments, keep their own medical history, and query doctor availability using natural language, seamlessly translating conversational intent into strict database operations.
 
-## Layout
+## 🚀 Live Demo
+**Access the live application here:** [Smart Doctor AI](https://smart-doctor-ai.vercel.app/)
+
+*Note: The backend is hosted on a free Render instance. If the application has not been used in the last 15 minutes, the server will go to sleep. **The first message you send may take 30–50 seconds to process** while the server wakes up. Subsequent messages will be instant.*
+
+## 🧠 Core Architecture
+This project implements a true Agentic Loop, where an LLM is granted autonomous access to backend tools to fulfill user requests.
+
+* **Frontend:** React, Vite, and custom CSS for a ChatGPT-style conversational interface. Hosted on Vercel.
+* **Backend:** FastAPI (Python) implementing modular routing and MCP tool exposure. Hosted on Render.
+* **MCP Server:** A standalone `FastMCP` server over stdio. The chat endpoint is an MCP *client* — it discovers the tools at runtime rather than hardcoding them.
+* **Database:** SQLite with SQLAlchemy ORM.
+* **Data Validation:** Pydantic schemas ensure the LLM cannot hallucinate or inject malformed data into the database.
+* **AI Agent:** Groq API. `openai/gpt-oss-120b` for reasoning and tool calling, `qwen/qwen3.6-27b` for reading uploaded photos.
+* **Memory:** Multi-turn conversational memory persisted via session IDs.
+
+### How the pieces fit
 
 ```
 backend/
-  mcp_server.py     MCP server, exposes the scheduling tools and the history resource
-  mcp_client.py     stdio client the API uses to reach the server
-  services.py       booking, lookup and cancellation logic
+  mcp_server.py     MCP server: the scheduling and record tools, plus a history resource
+  mcp_client.py     stdio client the API uses to reach that server
+  services.py       booking, records, prescriptions and photo-draft logic
+  extraction.py     reads medicines and conditions out of an image
   chat.py           chat endpoint, discovers its tools from the MCP server
   main.py           FastAPI app the frontend talks to
 frontend/           React chat UI
 ```
 
-The scheduling logic lives in `services.py` and has exactly two callers: the MCP
-tools and the HTTP routes. Neither keeps its own copy.
+All domain logic lives in `services.py` and has exactly two callers: the MCP tools and the HTTP routes. Neither keeps its own copy, so the two can't drift apart.
 
-## Running the backend
+## ⚡ Features
+* **Natural Language Processing:** Users can type complex requests (e.g., "I need to see Dr. House tomorrow at 10 AM for a severe headache").
+* **Autonomous Tool Execution:** The AI parses the prompt, decides which tool to use, and executes the SQL queries.
+* **Runtime Tool Discovery:** Tools are listed over MCP and converted to the model's function-calling format on the fly — adding a tool to the MCP server is enough to make the agent aware of it.
+* **Medical History & Prescriptions:** Patients record conditions, allergies, surgeries and medications. The agent checks allergies and current medicines before answering anything treatment-adjacent.
+* **Photo Extraction:** Photograph a prescription and have the medicines, conditions and allergies read out of it — behind a confirmation step (see below).
+* **Multi-Turn Memory:** The agent remembers previous context within the same session.
+* **Strict Schema Enforcement:** Backend refuses any AI requests that do not match the strict Pydantic database models, and rejects double-booking a doctor.
 
-```
-cd backend
-python -m venv venv
-venv/Scripts/activate
-pip install -r requirements.txt
-python seed.py
-uvicorn main:app --reload
-```
-
-The API starts the MCP server itself as a subprocess, so nothing else is needed.
-`GET /` reports whether that connection came up.
-
-`backend/.env` holds the configuration:
-
-```
-GROQ_API_KEY=your-key
-DATABASE_URL=sqlite:///./health_assistant.db
-ALLOWED_ORIGINS=http://localhost:5173
-```
-
-## Running the frontend
-
-```
-cd frontend
-npm install
-npm run dev
-```
-
-## Using the MCP server from another host
-
-The server also runs standalone over stdio, so any MCP host can use it:
-
-```
-python backend/mcp_server.py
-```
-
-To register it with Claude Desktop, add this to your `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "smart-doctor": {
-      "command": "python",
-      "args": ["C:/Projects/smart-doctor/backend/mcp_server.py"]
-    }
-  }
-}
-```
-
-Tools:
+## 🧰 MCP Tools
 
 | Tool | Does |
 | --- | --- |
@@ -88,14 +61,30 @@ Tools:
 | `confirm_photo_draft` | save a draft the patient has approved |
 | `discard_photo_draft` | throw a draft away unsaved |
 
-Resource: `appointment://patient/{patient_id}/history`, which returns allergies,
-conditions, medications and appointments as one summary an LLM can read in a
-single call.
+Resource: `appointment://patient/{patient_id}/history` — allergies, conditions, medications and appointments as one summary the model can read in a single call.
 
-## Medical history and prescriptions
+The server also runs standalone over stdio, so any MCP host can use it:
 
-Patients build their own record, either by talking to the assistant or through
-the API directly:
+```bash
+python backend/mcp_server.py
+```
+
+To register it with Claude Desktop, add this to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "smart-doctor": {
+      "command": "python",
+      "args": ["C:/Projects/smart-doctor/backend/mcp_server.py"]
+    }
+  }
+}
+```
+
+## 📋 Medical History & Prescriptions
+
+Patients build their own record, either by talking to the assistant or through the API:
 
 ```
 POST   /records/history                        add a condition, allergy, surgery or note
@@ -107,18 +96,9 @@ POST   /records/prescriptions/{id}/stop        mark a medication as stopped
 GET    /records/summary/{patient_id}           the whole record as readable text
 ```
 
-History entries are one of four categories: `condition`, `allergy`, `surgery` or
-`note`. Prescriptions carry a dosage, a frequency and an optional prescribing
-doctor, and are never deleted, only stopped, so the record stays honest about
-what someone used to take.
+History entries are one of `condition`, `allergy`, `surgery` or `note`. Prescriptions are never deleted, only stopped, so the record stays honest about what someone used to take.
 
-The assistant reads all of this before it answers, which is what makes the
-allergy list worth having.
-
-## Photos
-
-A patient can photograph a prescription or discharge note and have the details
-read out of it:
+## 📷 Photo Extraction
 
 ```
 POST /records/photos                     multipart upload: patient_id + file
@@ -129,24 +109,56 @@ POST /records/photos/{photo_id}/confirm  save the approved items
 POST /records/photos/{photo_id}/discard  throw the draft away
 ```
 
-Uploading extracts, it does not save. The response is a draft of the medications
-and history entries found in the image, and the record is only written when the
-patient confirms. The confirm body may contain edited items, so a patient can fix
-a misread dosage or drop a line before anything is stored. Items that match
-something already on file come back flagged `already_on_file` so nobody confirms
-the same prescription twice.
+**Uploading extracts, it does not save.** The response is a draft of the medications and history entries found in the image, and the record is only written when the patient confirms. The confirm body may carry edited items, so a misread dosage can be fixed or a line dropped before anything is stored. Items matching something already on file come back flagged `already_on_file`.
 
-This matters because vision models misread handwriting, and a dosage that reads
-`5mg` as `50mg` is not a bug you want to find later. The assistant is instructed
-to read the draft back item by item and never confirm on the patient's behalf.
-Text inside an image is treated as data to report, never as instructions to
-follow.
+This matters because vision models misread handwriting, and a dosage that reads `5mg` as `50mg` is not a bug you want to find later. The assistant is instructed to read the draft back item by item and never confirm on the patient's behalf. Text inside an image is treated as data to report, never as instructions to follow.
 
-Images accept PNG, JPEG and WebP up to 8MB, and are written to `backend/uploads`.
-That directory is local disk, so on a platform with an ephemeral filesystem the
-images do not survive a redeploy even though the extracted records do.
+PNG, JPEG and WebP up to 8MB, written to `backend/uploads`. That is local disk, so on an ephemeral filesystem the images do not survive a redeploy even though the extracted records do.
 
-## A note on access control
+## ⚠️ Architecture Notes: Google Calendar Integration
+The Agentic workflow is fully wired to trigger the Google Calendar API via OAuth 2.0. However, because this production deployment utilizes a free-tier headless cloud server (Render), the browser-based authentication flow cannot be completed in the live environment. For security purposes, the `credentials.json` and `token.json` files are strictly excluded via `.gitignore`.
 
-There is no authentication yet. Any caller can read or book against any
-`patient_id`, which needs solving before this handles real patient data.
+**Graceful Degradation:** Calendar sync is engineered with a `try/except` fallback and is skipped entirely when no token has been authorised, so it can never block a booking on a headless server. The appointment persists to the database and the agent continues the conversation without disrupting the user experience. To authorise it locally, run `python backend/tools/google_cal.py` once.
+
+## 🛠️ Local Setup & Installation
+
+To run this project locally with full Google Calendar integration:
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/suyash503/Smart-Doctor-Appointment-System.git
+   ```
+
+2. **Backend Setup:**
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   pip install -r requirements.txt
+   python seed.py
+   uvicorn main:app --reload
+   ```
+
+   The API starts the MCP server itself as a subprocess, so nothing else is needed. `GET /` reports whether that connection came up.
+
+   Add your Groq API key to a `.env` file in `backend/`:
+
+   ```
+   GROQ_API_KEY=your-key
+   DATABASE_URL=sqlite:///./health_assistant.db
+   ALLOWED_ORIGINS=http://localhost:5173
+   ```
+
+3. **Frontend Setup:**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+## 🔒 A note on access control
+
+There is no authentication yet. `patient_id` is supplied by the caller, so any caller can read or write against any patient. This needs solving before the project handles real patient data — the fix is to derive the patient from an authenticated session and drop the argument from the tool schemas entirely, so the model never chooses whose record it touches.
+
+## 👤 Author
+Suyash
