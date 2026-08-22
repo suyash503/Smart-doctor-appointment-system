@@ -129,3 +129,211 @@
   background-color: #94a3b8;
   cursor: not-allowed;
 }
+.patient-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+}
+
+.patient-field input {
+  width: 62px;
+  padding: 4px 8px;
+  border: 1px solid #475569;
+  border-radius: 12px;
+  background-color: #1e293b;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.attach-button {
+  background-color: #e2e8f0;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.attach-button:hover:not(:disabled) {
+  background-color: #cbd5e1;
+}
+
+.attach-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.draft-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background-color: #ffffff;
+  text-align: left;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.draft-head {
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f1f5f9;
+}
+
+.draft-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.draft-warning {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #b45309;
+}
+
+.draft-body {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.draft-image {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.draft-image img {
+  width: 140px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  display: block;
+}
+
+.draft-filename {
+  font-size: 0.7rem;
+  color: #64748b;
+  max-width: 140px;
+  overflow-wrap: anywhere;
+}
+
+.draft-details {
+  flex: 1;
+  min-width: 260px;
+}
+
+.draft-summary {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.45;
+  margin-bottom: 0.6rem;
+}
+
+.draft-error {
+  font-size: 0.85rem;
+  color: #b91c1c;
+  margin-bottom: 0.6rem;
+}
+
+.draft-section h3 {
+  margin: 0.7rem 0 0.4rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.draft-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  flex-wrap: wrap;
+}
+
+.draft-row.excluded {
+  opacity: 0.45;
+}
+
+.draft-fields {
+  display: flex;
+  gap: 0.4rem;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.draft-fields input,
+.draft-fields select {
+  flex: 1;
+  min-width: 92px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #1e293b;
+  background-color: #ffffff;
+}
+
+.draft-fields input:focus,
+.draft-fields select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.draft-badge {
+  font-size: 0.65rem;
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.draft-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.8rem 1.1rem;
+  border-top: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.draft-actions button {
+  border: none;
+  padding: 0.5rem 1.1rem;
+  border-radius: 18px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.draft-actions .primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.draft-actions .primary:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.draft-actions .ghost {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+.draft-actions .ghost:hover:not(:disabled) {
+  background-color: #cbd5e1;
+}
+
+.draft-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

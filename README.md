@@ -115,6 +115,8 @@ This matters because vision models misread handwriting, and a dosage that reads 
 
 PNG, JPEG and WebP up to 8MB, written to `backend/uploads`. That is local disk, so on an ephemeral filesystem the images do not survive a redeploy even though the extracted records do.
 
+In the app, the paperclip beside the message box uploads a photo. What comes back is a review card next to the original image: every medicine and history entry is an editable field with a tick box, so a misread dosage gets fixed in place and an unwanted line gets unticked. Anything already in the record arrives ticked off and marked *already on file*, so a careless Save cannot duplicate it. Save writes only the ticked items; Discard writes nothing.
+
 ## ⚠️ Architecture Notes: Google Calendar Integration
 The Agentic workflow is fully wired to trigger the Google Calendar API via OAuth 2.0. However, because this production deployment utilizes a free-tier headless cloud server (Render), the browser-based authentication flow cannot be completed in the live environment. For security purposes, the `credentials.json` and `token.json` files are strictly excluded via `.gitignore`.
 
@@ -154,6 +156,13 @@ To run this project locally with full Google Calendar integration:
    cd frontend
    npm install
    npm run dev
+   ```
+
+   The frontend talks to the deployed backend by default. To point it at the API
+   you just started, create `frontend/.env.local`:
+
+   ```
+   VITE_API_BASE=http://127.0.0.1:8000
    ```
 
 ## 🔒 A note on access control
