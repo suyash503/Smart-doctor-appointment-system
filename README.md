@@ -69,7 +69,7 @@ The server also runs standalone over stdio, so any MCP host can use it:
 python backend/mcp_server.py
 ```
 
-To register it with Claude Desktop, add this to `claude_desktop_config.json`:
+To register it with an MCP-compatible client, add this to that client's server config:
 
 ```json
 {
