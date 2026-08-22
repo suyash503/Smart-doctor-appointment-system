@@ -63,6 +63,23 @@ class Prescription(Base):
     patient = relationship("User")
     doctor = relationship("Doctor")
 
+class PhotoUpload(Base):
+    """A photo the patient uploaded, and whatever the vision model read from it."""
+    __tablename__ = "photo_uploads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), index=True)
+    filename = Column(String)
+    content_type = Column(String)
+    stored_path = Column(String)
+    uploaded_at = Column(DateTime, default=datetime.now)
+    status = Column(String, default="pending", index=True)
+    summary = Column(Text, nullable=True)
+    extracted = Column(Text, nullable=True)
+    error = Column(Text, nullable=True)
+
+    patient = relationship("User")
+
 class ChatMessage(Base):
     """Stores the multi-turn conversation history."""
     __tablename__ = "chat_messages"

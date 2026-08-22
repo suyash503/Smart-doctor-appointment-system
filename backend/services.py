@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from sqlalchemy.orm import Session
@@ -290,3 +291,150 @@ def format_patient_history(db: Session, patient_id: int) -> str:
     header = f"Medical history for {patient.name} (patient {patient_id})"
 
     return header + "\n\n" + "\n\n".join(sections)
+
+
+def get_photo(db: Session, photo_id: int):
+    photo = (
+        db.query(models.PhotoUpload)
+        .filter(models.PhotoUpload.id == photo_id)
+        .first()
+    )
+    if photo is None:
+        raise BookingError(f"No photo found with id {photo_id}.")
+
+    return photo
+
+
+def mark_duplicates(db: Session, patient_id, medications, records):
+    existing_medications = {
+        (prescription.medication or "").strip().lower()
+        for prescription in list_prescriptions(db, patient_id, active_only=True)
+    }
+    existing_records = {
+        ((record.category or "").lower(), (record.title or "").strip().lower())
+        for record in list_medical_records(db, patient_id)
+    }
+
+    for item in medications:
+        name = (item.get("medication") or "").strip().lower()
+        item["already_on_file"] = name in existing_medications
+
+    for item in records:
+        key = ((item.get("category") or "").lower(), (item.get("title") or "").strip().lower())
+        item["already_on_file"] = key in existing_records
+
+
+def photo_draft(photo, db: Session = None):
+    try:
+        extracted = json.loads(photo.extracted) if photo.extracted else {}
+    except json.JSONDecodeError:
+        extracted = {}
+
+    medications = extracted.get("medications", [])
+    records = extracted.get("records", [])
+
+    if db is not None:
+        mark_duplicates(db, photo.patient_id, medications, records)
+
+    return {
+        "id": photo.id,
+        "patient_id": photo.patient_id,
+        "filename": photo.filename,
+        "uploaded_at": photo.uploaded_at.isoformat() if photo.uploaded_at else None,
+        "status": photo.status,
+        "summary": photo.summary,
+        "error": photo.error,
+        "medications": medications,
+        "records": records,
+    }
+
+
+def create_photo(db: Session, patient_id, filename, content_type, stored_path):
+    require_patient(db, patient_id)
+
+    photo = models.PhotoUpload(
+        patient_id=patient_id,
+        filename=filename,
+        content_type=content_type,
+        stored_path=str(stored_path),
+        status="pending",
+    )
+    db.add(photo)
+
+    return commit(db, photo)
+
+
+def save_extraction(db: Session, photo, extracted=None, error=None):
+    photo.extracted = json.dumps(extracted) if extracted else None
+    photo.summary = (extracted or {}).get("summary") or None
+    photo.error = error
+    photo.status = "failed" if error else "pending"
+
+    return commit(db, photo)
+
+
+def list_pending_photos(db: Session, patient_id):
+    return (
+        db.query(models.PhotoUpload)
+        .filter(
+            models.PhotoUpload.patient_id == patient_id,
+            models.PhotoUpload.status == "pending",
+        )
+        .order_by(models.PhotoUpload.uploaded_at.desc())
+        .all()
+    )
+
+
+def confirm_photo(db: Session, photo_id, medications=None, records=None):
+    photo = get_photo(db, photo_id)
+
+    if photo.status == "confirmed":
+        raise BookingError(f"Photo {photo_id} has already been confirmed.")
+
+    if photo.status == "discarded":
+        raise BookingError(f"Photo {photo_id} was discarded.")
+
+    draft = photo_draft(photo)
+    chosen_medications = draft["medications"] if medications is None else medications
+    chosen_records = draft["records"] if records is None else records
+
+    created = {"medications": [], "records": []}
+
+    for item in chosen_records:
+        record = add_medical_record(
+            db,
+            photo.patient_id,
+            item.get("category") or "note",
+            item.get("title"),
+            item.get("details") or None,
+        )
+        created["records"].append(record.id)
+
+    for item in chosen_medications:
+        prescription = add_prescription(
+            db,
+            photo.patient_id,
+            item.get("medication"),
+            item.get("dosage") or None,
+            item.get("frequency") or None,
+            None,
+            None,
+            item.get("notes") or None,
+        )
+        created["medications"].append(prescription.id)
+
+    photo.status = "confirmed"
+    commit(db, photo)
+
+    return created
+
+
+def discard_photo(db: Session, photo_id):
+    photo = get_photo(db, photo_id)
+
+    if photo.status == "confirmed":
+        raise BookingError(f"Photo {photo_id} was already confirmed and cannot be discarded.")
+
+    photo.status = "discarded"
+
+    return commit(db, photo)

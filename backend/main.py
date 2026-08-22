@@ -8,7 +8,7 @@ import chat
 from core.config import ALLOWED_ORIGINS
 from database.database import Base, engine
 from mcp_client import toolbox
-from tools import booking, querying, records
+from tools import booking, photos, querying, records
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ app.add_middleware(
 app.include_router(booking.router)
 app.include_router(querying.router)
 app.include_router(records.router)
+app.include_router(photos.router)
 app.include_router(chat.router)
 
 

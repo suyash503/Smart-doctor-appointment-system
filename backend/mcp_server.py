@@ -245,5 +245,66 @@ async def stop_prescription(prescription_id: int, ctx: Context, ended_on: str = 
         return f"Marked {prescription.medication} as stopped."
 
 
+@mcp.tool()
+async def list_photo_drafts(patient_id: int, ctx: Context) -> str:
+    """List photos the patient uploaded that are still waiting to be confirmed.
+
+    Nothing from a photo reaches the medical record until the patient confirms it,
+    so read the draft back to them and ask before calling confirm_photo_draft.
+    """
+    with session_scope() as db:
+        drafts = [services.photo_draft(photo, db) for photo in services.list_pending_photos(db, patient_id)]
+
+    if not drafts:
+        return f"Patient {patient_id} has no photos waiting to be confirmed."
+
+    return as_json(drafts)
+
+
+@mcp.tool()
+async def get_photo_draft(photo_id: int, ctx: Context) -> str:
+    """Read what was extracted from one uploaded photo, without saving anything."""
+    with session_scope() as db:
+        try:
+            return as_json(services.photo_draft(services.get_photo(db, photo_id), db))
+        except services.BookingError as error:
+            return str(error)
+
+
+@mcp.tool()
+async def confirm_photo_draft(photo_id: int, ctx: Context) -> str:
+    """Save everything in a photo draft to the patient's record.
+
+    Only call this after the patient has seen the extracted details and agreed to
+    them. If they want to change or drop an item, edit it through the record tools
+    instead of confirming the whole draft.
+    """
+    with session_scope() as db:
+        try:
+            created = services.confirm_photo(db, photo_id)
+        except services.BookingError as error:
+            await ctx.warning(str(error))
+            return str(error)
+
+        await ctx.info(f"Confirmed photo {photo_id}.")
+        return (
+            f"Saved {len(created['medications'])} medication(s) and "
+            f"{len(created['records'])} history entr(ies) from photo {photo_id}."
+        )
+
+
+@mcp.tool()
+async def discard_photo_draft(photo_id: int, ctx: Context) -> str:
+    """Throw away a photo draft without saving any of it."""
+    with session_scope() as db:
+        try:
+            services.discard_photo(db, photo_id)
+        except services.BookingError as error:
+            await ctx.warning(str(error))
+            return str(error)
+
+        return f"Discarded photo {photo_id}. Nothing was saved."
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

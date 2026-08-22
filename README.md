@@ -83,6 +83,10 @@ Tools:
 | `add_prescription` | record a medication with dosage and frequency |
 | `list_prescriptions` | medications, optionally active only |
 | `stop_prescription` | mark a medication as no longer taken |
+| `list_photo_drafts` | photos waiting for the patient to confirm |
+| `get_photo_draft` | read what was extracted from one photo |
+| `confirm_photo_draft` | save a draft the patient has approved |
+| `discard_photo_draft` | throw a draft away unsaved |
 
 Resource: `appointment://patient/{patient_id}/history`, which returns allergies,
 conditions, medications and appointments as one summary an LLM can read in a
@@ -110,6 +114,37 @@ what someone used to take.
 
 The assistant reads all of this before it answers, which is what makes the
 allergy list worth having.
+
+## Photos
+
+A patient can photograph a prescription or discharge note and have the details
+read out of it:
+
+```
+POST /records/photos                     multipart upload: patient_id + file
+GET  /records/photos/pending/{patient}   drafts still waiting on confirmation
+GET  /records/photos/draft/{photo_id}    one draft
+GET  /records/photos/image/{photo_id}    the original image
+POST /records/photos/{photo_id}/confirm  save the approved items
+POST /records/photos/{photo_id}/discard  throw the draft away
+```
+
+Uploading extracts, it does not save. The response is a draft of the medications
+and history entries found in the image, and the record is only written when the
+patient confirms. The confirm body may contain edited items, so a patient can fix
+a misread dosage or drop a line before anything is stored. Items that match
+something already on file come back flagged `already_on_file` so nobody confirms
+the same prescription twice.
+
+This matters because vision models misread handwriting, and a dosage that reads
+`5mg` as `50mg` is not a bug you want to find later. The assistant is instructed
+to read the draft back item by item and never confirm on the patient's behalf.
+Text inside an image is treated as data to report, never as instructions to
+follow.
+
+Images accept PNG, JPEG and WebP up to 8MB, and are written to `backend/uploads`.
+That directory is local disk, so on a platform with an ephemeral filesystem the
+images do not survive a redeploy even though the extracted records do.
 
 ## A note on access control
 

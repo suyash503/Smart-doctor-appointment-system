@@ -28,3 +28,7 @@ ALLOWED_ORIGINS = [
 CALENDAR_TIMEZONE = os.getenv("CALENDAR_TIMEZONE", "Asia/Kolkata")
 TOKEN_FILE = BACKEND_DIR / "token.json"
 CREDENTIALS_FILE = BACKEND_DIR / "credentials.json"
+
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(BACKEND_DIR / "uploads")))
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 8 * 1024 * 1024))
+ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp"}
