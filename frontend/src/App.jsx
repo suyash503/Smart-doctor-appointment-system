@@ -1,12 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import './App.css'
+import Message from './Message'
 import PhotoDraft from './PhotoDraft'
+import { LogoMark, PaperclipIcon, SendIcon } from './icons'
 import { confirmDraft, discardDraft, listPendingDrafts, sendChat, uploadPhoto } from './api'
 
-const GREETING = "Hello! I'm your hospital assistant. Ask about doctors, book a visit, or upload a photo of a prescription."
+const SUGGESTIONS = [
+  'Which doctors are available?',
+  'What am I allergic to?',
+  'What medicines am I taking?',
+  'Book me a follow-up next week',
+]
 
 function App() {
-  const [messages, setMessages] = useState([{ role: 'assistant', content: GREETING }])
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -16,12 +23,13 @@ function App() {
 
   const [sessionId] = useState(() => `session_${Math.random().toString(36).substring(2, 9)}`)
 
-  const messagesEndRef = useRef(null)
-  const fileInputRef = useRef(null)
+  const endRef = useRef(null)
+  const fileRef = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, draft])
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages, draft, isLoading])
 
   useEffect(() => {
     localStorage.setItem('patientId', patientId)
@@ -33,15 +41,12 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
-
     const id = Number(patientId)
     if (!id) return undefined
 
     listPendingDrafts(id)
       .then((pending) => {
-        if (!cancelled && pending && pending.length > 0) {
-          setDraft(pending[0])
-        }
+        if (!cancelled && pending && pending.length > 0) setDraft(pending[0])
       })
       .catch(() => {})
 
@@ -50,22 +55,41 @@ function App() {
     }
   }, [patientId])
 
-  const sendMessage = async (e) => {
-    e.preventDefault()
-    if (!input.trim()) return
+  const grow = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+  }
 
-    const userMessage = input.trim()
-    say(userMessage, 'user')
+  const ask = async (text) => {
+    const question = text.trim()
+    if (!question || isLoading) return
+
+    say(question, 'user')
     setInput('')
+    requestAnimationFrame(grow)
     setIsLoading(true)
 
     try {
-      const data = await sendChat(sessionId, userMessage)
+      const data = await sendChat(sessionId, question, patientId)
       say(data.reply)
     } catch (error) {
-      say(`Sorry, I could not reach the server. ${error.message}`)
+      say(`I could not reach the server. ${error.message}`)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const onSubmit = (e) => {
+    e.preventDefault()
+    ask(input)
+  }
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      ask(input)
     }
   }
 
@@ -76,19 +100,19 @@ function App() {
 
     const id = Number(patientId)
     if (!id) {
-      say('Enter your patient number before uploading a photo.')
+      say('Add your patient number in the header before uploading a photo.')
       return
     }
 
-    say(`Uploading ${file.name}...`, 'user')
+    say(`Sent a photo — ${file.name}`, 'user')
     setIsLoading(true)
 
     try {
       const uploaded = await uploadPhoto(id, file)
       setDraft(uploaded)
-      say('I read the photo. Check the details below and save the ones that look right.')
+      say('Here is what I read from that photo. Check it over and keep what looks right.')
     } catch (error) {
-      say(`That photo could not be read. ${error.message}`)
+      say(`I could not read that photo. ${error.message}`)
     } finally {
       setIsLoading(false)
     }
@@ -100,11 +124,10 @@ function App() {
     try {
       const result = await confirmDraft(photoId, medications, records)
       setDraft(null)
-      say(
-        `Saved ${result.added_medications} medication(s) and ${result.added_records} history entr${
-          result.added_records === 1 ? 'y' : 'ies'
-        } to your record.`,
-      )
+      const bits = []
+      if (result.added_medications) bits.push(`${result.added_medications} medicine${result.added_medications === 1 ? '' : 's'}`)
+      if (result.added_records) bits.push(`${result.added_records} history entr${result.added_records === 1 ? 'y' : 'ies'}`)
+      say(`Added ${bits.join(' and ')} to your record.`)
     } catch (error) {
       say(`Nothing was saved. ${error.message}`)
     } finally {
@@ -118,83 +141,130 @@ function App() {
     try {
       await discardDraft(photoId)
       setDraft(null)
-      say('Discarded that photo. Nothing was saved.')
+      say('Thrown away. Nothing from that photo was saved.')
     } catch (error) {
-      say(`Could not discard it. ${error.message}`)
+      say(`I could not discard it. ${error.message}`)
     } finally {
       setDraftBusy(false)
     }
   }
 
+  const empty = messages.length === 0 && !draft
+
   return (
-    <div className="chat-container">
-      <header className="chat-header">
-        <h1>🏥 Smart Hospital Assistant</h1>
-        <label className="patient-field">
-          Patient
-          <input
-            type="number"
-            min="1"
-            value={patientId}
-            onChange={(e) => setPatientId(e.target.value)}
-          />
-        </label>
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <div className="brand">
+            <span className="brand-mark">
+              <LogoMark />
+            </span>
+            <span className="brand-text">
+              <strong>Smart Doctor</strong>
+              <small>Appointments &amp; records</small>
+            </span>
+          </div>
+
+          <label className="patient">
+            <span>Patient</span>
+            <input
+              type="number"
+              min="1"
+              value={patientId}
+              onChange={(e) => setPatientId(e.target.value)}
+              aria-label="Patient number"
+            />
+          </label>
+        </div>
       </header>
 
-      <div className="chat-box">
-        {messages.map((msg, index) => (
-          <div key={index} className={`message-wrapper ${msg.role}`}>
-            <div className={`message-bubble ${msg.role}`}>{msg.content}</div>
-          </div>
-        ))}
+      <main className="thread">
+        <div className="thread-inner">
+          {empty && (
+            <section className="welcome">
+              <span className="welcome-mark">
+                <LogoMark width="26" height="26" />
+              </span>
+              <h1>How can I help today?</h1>
+              <p>
+                Ask about doctors and appointments, or send a photo of a prescription and I will
+                read it into your record.
+              </p>
+              <div className="chips">
+                {SUGGESTIONS.map((text) => (
+                  <button key={text} type="button" className="chip" onClick={() => ask(text)}>
+                    {text}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
-        {isLoading && (
-          <div className="message-wrapper assistant">
-            <div className="message-bubble assistant typing">Thinking...</div>
-          </div>
-        )}
+          {messages.map((msg, index) => (
+            <Message key={index} role={msg.role} content={msg.content} />
+          ))}
 
-        {draft && (
-          <PhotoDraft
-            key={draft.id}
-            draft={draft}
-            busy={draftBusy}
-            onConfirm={handleConfirm}
-            onDiscard={handleDiscard}
+          {isLoading && <Message role="assistant" pending />}
+
+          {draft && (
+            <PhotoDraft
+              key={draft.id}
+              draft={draft}
+              busy={draftBusy}
+              onConfirm={handleConfirm}
+              onDiscard={handleDiscard}
+            />
+          )}
+
+          <div ref={endRef} />
+        </div>
+      </main>
+
+      <footer className="composer">
+        <form className="composer-inner" onSubmit={onSubmit}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={handleFile}
+            hidden
           />
-        )}
 
-        <div ref={messagesEndRef} />
-      </div>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Attach a prescription photo"
+            aria-label="Attach a prescription photo"
+            disabled={isLoading}
+            onClick={() => fileRef.current?.click()}
+          >
+            <PaperclipIcon />
+          </button>
 
-      <form onSubmit={sendMessage} className="chat-input-form">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={handleFile}
-          hidden
-        />
-        <button
-          type="button"
-          className="attach-button"
-          title="Upload a prescription photo"
-          disabled={isLoading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          📎
-        </button>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about doctors, or attach a prescription photo..."
-          disabled={isLoading}
-        />
-        <button type="submit" disabled={isLoading || !input.trim()}>
-          Send
-        </button>
-      </form>
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={input}
+            placeholder="Ask a question, or attach a photo…"
+            disabled={isLoading}
+            onChange={(e) => {
+              setInput(e.target.value)
+              grow()
+            }}
+            onKeyDown={onKeyDown}
+          />
+
+          <button
+            type="submit"
+            className="send-btn"
+            aria-label="Send message"
+            disabled={isLoading || !input.trim()}
+          >
+            <SendIcon />
+          </button>
+        </form>
+        <p className="disclaimer">Not a substitute for medical advice.</p>
+      </footer>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from groq import AsyncGroq
@@ -36,6 +37,7 @@ MAX_TOOL_ROUNDS = 4
 class ChatRequest(BaseModel):
     session_id: str
     message: str
+    patient_id: Optional[int] = None
 
 
 def load_history(db: Session, session_id: str):
@@ -75,7 +77,14 @@ async def run_tool_calls(conversation, tool_calls):
 
 @router.post("/")
 async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
-    conversation = [{"role": "system", "content": SYSTEM_PROMPT}]
+    system_prompt = SYSTEM_PROMPT
+    if request.patient_id:
+        system_prompt += (
+            f" You are speaking to patient {request.patient_id}, so use that id with your "
+            "tools instead of asking for it."
+        )
+
+    conversation = [{"role": "system", "content": system_prompt}]
     conversation.extend(load_history(db, request.session_id))
     conversation.append({"role": "user", "content": request.message})
 

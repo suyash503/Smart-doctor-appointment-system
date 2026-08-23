@@ -26,11 +26,15 @@ export function photoImageUrl(photoId) {
   return `${API_BASE}/records/photos/image/${photoId}`
 }
 
-export async function sendChat(sessionId, message) {
+export async function sendChat(sessionId, message, patientId) {
   const response = await fetch(`${API_BASE}/chat/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session_id: sessionId, message }),
+    body: JSON.stringify({
+      session_id: sessionId,
+      message,
+      patient_id: patientId ? Number(patientId) : null,
+    }),
   })
 
   return readResponse(response)
