@@ -56,7 +56,7 @@ function PhotoDraft({ draft, busy, onConfirm, onDiscard }) {
       <span className="toggle-box" aria-hidden="true">
         <CheckIcon />
       </span>
-      <span className="sr-only">Include this item</span>
+      <span className="toggle-text">Include</span>
     </label>
   )
 

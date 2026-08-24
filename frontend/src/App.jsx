@@ -25,7 +25,7 @@ const SUGGESTIONS = [
 const TEXT_SIZES = [
   { id: 'normal', label: 'Normal', root: '100%' },
   { id: 'large', label: 'Large', root: '115%' },
-  { id: 'largest', label: 'Largest', root: '132%' },
+  { id: 'largest', label: 'Largest', root: '150%' },
 ]
 
 function greeting() {
