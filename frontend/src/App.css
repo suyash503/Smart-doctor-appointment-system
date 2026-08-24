@@ -20,41 +20,42 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: saturate(1.6) blur(12px);
-  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
 }
 
 .topbar-inner,
 .thread-inner,
 .composer-inner {
   width: 100%;
-  max-width: 780px;
+  max-width: 54rem;
   margin: 0 auto;
-  padding-inline: 20px;
+  padding-inline: 1.25rem;
 }
 
 .topbar-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  height: 60px;
+  gap: 1rem;
+  min-height: 4.4rem;
+  flex-wrap: wrap;
+  padding-block: 0.6rem;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.7rem;
   min-width: 0;
 }
 
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.8rem;
   background: var(--brand-soft);
   color: var(--brand-text);
   flex-shrink: 0;
@@ -63,43 +64,83 @@
 .brand-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  line-height: 1.25;
   min-width: 0;
 }
 
 .brand-text strong {
-  font-size: 14.5px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
 }
 
 .brand-text small {
-  font-size: 12px;
+  font-size: 0.875rem;
   color: var(--text-3);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.textsize {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.4rem 0.25rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-3);
+}
+
+.textsize button {
+  min-height: 2.75rem;
+  padding: 0.25rem 0.7rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+
+.textsize button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.textsize button.on {
+  background: var(--brand);
+  color: #fff;
 }
 
 .patient {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 6px 5px 12px;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem 0.3rem 0.85rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--surface);
-  font-size: 12.5px;
+  font-size: 0.9375rem;
   color: var(--text-2);
-  flex-shrink: 0;
 }
 
 .patient input {
-  width: 52px;
-  padding: 3px 8px;
+  width: 3.6rem;
+  min-height: 2.75rem;
+  padding: 0.2rem 0.5rem;
   border: none;
   border-radius: var(--radius-pill);
   background: var(--surface-2);
   color: var(--text);
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 650;
   text-align: center;
 }
 
@@ -119,8 +160,8 @@
 .thread-inner {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding-block: 28px 12px;
+  gap: 1.5rem;
+  padding-block: 1.8rem 0.8rem;
 }
 
 .welcome {
@@ -128,65 +169,83 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
-  padding: 48px 0 12px;
+  gap: 0.85rem;
+  padding: 2.4rem 0 0.5rem;
 }
 
 .welcome-mark {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 3.9rem;
+  height: 3.9rem;
+  border-radius: 1.2rem;
   background: var(--brand-soft);
   color: var(--brand-text);
 }
 
 .welcome h1 {
-  font-size: 25px;
-  letter-spacing: -0.02em;
+  font-size: 2rem;
+  letter-spacing: -0.022em;
 }
 
 .welcome p {
-  max-width: 27rem;
+  max-width: 32rem;
   color: var(--text-2);
-  font-size: 14.5px;
+  font-size: 1.125rem;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
 }
 
 .chip {
-  padding: 8px 14px;
-  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: var(--tap);
+  padding: 0.6rem 1.15rem;
+  border: 1.5px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--surface);
-  color: var(--text-2);
-  font-size: 13px;
-  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+  color: var(--text);
+  font-size: 1.0625rem;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.chip svg {
+  color: var(--brand);
+  flex-shrink: 0;
 }
 
 .chip:hover {
   border-color: var(--brand);
-  color: var(--brand-text);
+  background: var(--brand-soft);
   transform: translateY(-1px);
+}
+
+.welcome-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  color: var(--text-3);
+  font-size: 1rem;
 }
 
 .msg {
   display: flex;
-  gap: 11px;
+  gap: 0.75rem;
   animation: rise 0.26s ease both;
 }
 
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(0.4rem);
   }
 }
 
@@ -197,9 +256,9 @@
 .msg-avatar {
   display: grid;
   place-items: center;
-  width: 27px;
-  height: 27px;
-  margin-top: 2px;
+  width: 2.15rem;
+  height: 2.15rem;
+  margin-top: 0.15rem;
   border-radius: 50%;
   background: var(--brand-soft);
   color: var(--brand-text);
@@ -212,11 +271,12 @@
 }
 
 .msg.user .msg-body {
-  max-width: 76%;
-  padding: 10px 15px;
-  border-radius: var(--radius-lg) var(--radius-lg) 5px var(--radius-lg);
+  max-width: 78%;
+  padding: 0.75rem 1.15rem;
+  border-radius: var(--radius-lg) var(--radius-lg) 0.35rem var(--radius-lg);
   background: var(--user-bubble);
   color: var(--user-text);
+  font-size: 1.0625rem;
 }
 
 .msg.user p {
@@ -226,18 +286,18 @@
 
 .msg.assistant .msg-body {
   flex: 1;
-  padding-top: 2px;
+  padding-top: 0.15rem;
 }
 
 .typing {
   display: inline-flex;
-  gap: 4px;
-  padding: 8px 2px;
+  gap: 0.3rem;
+  padding: 0.6rem 0.15rem;
 }
 
 .typing i {
-  width: 6px;
-  height: 6px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   background: var(--text-3);
   animation: blink 1.3s infinite ease-in-out;
@@ -260,12 +320,13 @@
   }
   35% {
     opacity: 1;
-    transform: translateY(-3px);
+    transform: translateY(-0.2rem);
   }
 }
 
 .prose {
-  font-size: 15px;
+  font-size: 1.125rem;
+  line-height: 1.65;
   overflow-wrap: anywhere;
 }
 
@@ -280,46 +341,46 @@
 .prose p,
 .prose ul,
 .prose ol {
-  margin: 0 0 10px;
+  margin: 0 0 0.75rem;
 }
 
 .prose ul,
 .prose ol {
-  padding-left: 20px;
+  padding-left: 1.4rem;
 }
 
 .prose li {
-  margin-bottom: 3px;
+  margin-bottom: 0.35rem;
 }
 
 .prose strong {
-  font-weight: 600;
+  font-weight: 650;
   color: var(--text);
 }
 
 .prose h1,
 .prose h2,
 .prose h3 {
-  font-size: 15px;
-  margin: 14px 0 6px;
+  font-size: 1.1875rem;
+  margin: 1rem 0 0.45rem;
 }
 
 .prose a {
   color: var(--brand-text);
-  text-underline-offset: 2px;
+  text-underline-offset: 0.15em;
 }
 
 .prose code {
-  padding: 1.5px 5px;
-  border-radius: 5px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
   background: var(--surface-3);
   font-family: var(--mono);
-  font-size: 12.8px;
+  font-size: 0.95em;
 }
 
 .prose pre {
   overflow-x: auto;
-  padding: 12px 14px;
+  padding: 0.85rem 1rem;
   border-radius: var(--radius);
   background: var(--surface-3);
 }
@@ -330,9 +391,9 @@
 }
 
 .prose blockquote {
-  margin: 0 0 10px;
-  padding-left: 12px;
-  border-left: 2px solid var(--line);
+  margin: 0 0 0.75rem;
+  padding-left: 0.85rem;
+  border-left: 0.2rem solid var(--line);
   color: var(--text-2);
 }
 
@@ -342,13 +403,13 @@
   max-width: 100%;
   overflow-x: auto;
   border-collapse: collapse;
-  margin: 4px 0 12px;
-  font-size: 13.5px;
+  margin: 0.3rem 0 0.85rem;
+  font-size: 1rem;
 }
 
 .prose th,
 .prose td {
-  padding: 7px 12px;
+  padding: 0.55rem 0.9rem;
   border: 1px solid var(--line);
   text-align: left;
   white-space: nowrap;
@@ -356,11 +417,11 @@
 
 .prose th {
   background: var(--surface-2);
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .draft {
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -372,30 +433,31 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 15px 18px;
+  gap: 0.85rem;
+  padding: 1.1rem 1.25rem;
   border-bottom: 1px solid var(--line-soft);
+  background: var(--brand-soft);
 }
 
 .draft-head h2 {
-  font-size: 14.5px;
+  font-size: 1.1875rem;
 }
 
 .draft-head p {
-  margin-top: 2px;
-  font-size: 12.5px;
-  color: var(--text-2);
+  margin-top: 0.2rem;
+  font-size: 1rem;
+  color: var(--brand-text);
 }
 
 .draft-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
   border-radius: var(--radius-pill);
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--text-3);
-  font-size: 11.5px;
+  font-size: 0.875rem;
   max-width: 40%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -405,8 +467,8 @@
 
 .draft-main {
   display: flex;
-  gap: 16px;
-  padding: 16px 18px;
+  gap: 1.1rem;
+  padding: 1.1rem 1.25rem;
   align-items: flex-start;
 }
 
@@ -416,7 +478,7 @@
 }
 
 .draft-figure img {
-  width: 116px;
+  width: 9rem;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   display: block;
@@ -428,24 +490,24 @@
 }
 
 .draft-summary {
-  font-size: 13.5px;
+  font-size: 1.0625rem;
   color: var(--text-2);
-  margin-bottom: 4px;
+  margin-bottom: 0.3rem;
 }
 
 .notice {
   display: flex;
   align-items: flex-start;
-  gap: 7px;
-  padding: 9px 12px;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
   border-radius: var(--radius-sm);
-  font-size: 13px;
-  margin-bottom: 10px;
+  font-size: 1rem;
+  margin-bottom: 0.7rem;
 }
 
 .notice svg {
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 0.2rem;
 }
 
 .notice.danger {
@@ -454,37 +516,37 @@
 }
 
 .group {
-  margin-top: 14px;
+  margin-top: 1rem;
 }
 
 .group h3 {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-3);
-  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+  margin-bottom: 0.4rem;
 }
 
 .entry {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  padding: 8px 0;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
   border-top: 1px solid var(--line-soft);
   transition: opacity 0.15s;
 }
 
 .entry.off {
-  opacity: 0.42;
+  opacity: 0.5;
 }
 
 .entry-grid {
   display: grid;
-  gap: 8px;
+  gap: 0.6rem;
   flex: 1;
   min-width: 0;
 }
@@ -500,24 +562,24 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0.2rem;
   min-width: 0;
 }
 
 .field span {
-  font-size: 10.5px;
-  color: var(--text-3);
-  letter-spacing: 0.02em;
+  font-size: 0.875rem;
+  color: var(--text-2);
 }
 
 .field input,
 .field select {
   width: 100%;
-  padding: 6px 9px;
-  border: 1px solid var(--line);
+  min-height: 2.6rem;
+  padding: 0.45rem 0.65rem;
+  border: 1.5px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
-  font-size: 13px;
+  font-size: 1.0625rem;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -531,26 +593,33 @@
 .toggle {
   position: relative;
   display: inline-flex;
-  padding-bottom: 6px;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
   flex-shrink: 0;
 }
 
 .toggle input {
   position: absolute;
+  inset: 0;
   opacity: 0;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
 }
 
 .toggle-box {
   display: grid;
   place-items: center;
-  width: 19px;
-  height: 19px;
-  border: 1.5px solid var(--line);
-  border-radius: 6px;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 2px solid var(--line);
+  border-radius: 0.45rem;
   background: var(--surface);
   color: transparent;
+  pointer-events: none;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
@@ -566,12 +635,13 @@
 
 .tag {
   align-self: center;
-  padding: 3px 8px;
+  padding: 0.25rem 0.65rem;
   border: 1px solid var(--warn-line);
   border-radius: var(--radius-pill);
   background: var(--warn-soft);
   color: var(--warn);
-  font-size: 10.5px;
+  font-size: 0.875rem;
+  font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -580,28 +650,31 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 18px;
+  gap: 0.85rem;
+  padding: 0.9rem 1.25rem;
   border-top: 1px solid var(--line-soft);
   background: var(--surface-2);
+  flex-wrap: wrap;
 }
 
 .count {
-  font-size: 12.5px;
-  color: var(--text-3);
+  font-size: 1rem;
+  color: var(--text-2);
+  font-weight: 500;
 }
 
 .draft-buttons {
   display: flex;
-  gap: 8px;
+  gap: 0.6rem;
 }
 
 .btn {
-  padding: 8px 16px;
-  border: 1px solid transparent;
+  min-height: var(--tap);
+  padding: 0.55rem 1.35rem;
+  border: 1.5px solid transparent;
   border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 1.0625rem;
+  font-weight: 550;
   transition: background 0.15s, border-color 0.15s, opacity 0.15s;
 }
 
@@ -615,9 +688,9 @@
 }
 
 .btn.ghost {
-  background: transparent;
+  background: var(--surface);
   border-color: var(--line);
-  color: var(--text-2);
+  color: var(--text);
 }
 
 .btn.ghost:hover:not(:disabled) {
@@ -629,19 +702,18 @@
 }
 
 .composer {
-  border-top: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: saturate(1.6) blur(12px);
-  padding-block: 12px 8px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding-block: 0.8rem 0.6rem;
 }
 
 .composer-inner {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  padding: 7px 8px 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
+  gap: 0.5rem;
+  padding: 0.4rem 0.45rem 0.4rem 0.5rem;
+  border: 2px solid var(--line);
+  border-radius: 1.7rem;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -659,10 +731,10 @@
   outline: none;
   resize: none;
   background: none;
-  padding: 7px 2px;
-  font-size: 14.5px;
+  padding: 0.6rem 0.3rem;
+  font-size: 1.125rem;
   line-height: 1.5;
-  max-height: 160px;
+  max-height: 12rem;
 }
 
 .composer-inner textarea::placeholder {
@@ -672,19 +744,19 @@
 .icon-btn {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: var(--tap);
+  height: var(--tap);
   border: none;
   border-radius: 50%;
-  background: transparent;
-  color: var(--text-3);
+  background: var(--surface-2);
+  color: var(--text-2);
   flex-shrink: 0;
   transition: background 0.15s, color 0.15s;
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: var(--surface-3);
-  color: var(--text);
+  background: var(--brand-soft);
+  color: var(--brand-text);
 }
 
 .icon-btn:disabled {
@@ -692,14 +764,17 @@
 }
 
 .send-btn {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--tap);
+  padding: 0 1.1rem;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   background: var(--brand);
   color: #fff;
+  font-size: 1.0625rem;
+  font-weight: 550;
   flex-shrink: 0;
   transition: background 0.15s, opacity 0.15s;
 }
@@ -714,24 +789,33 @@
 }
 
 .disclaimer {
-  max-width: 780px;
-  margin: 7px auto 0;
-  padding-inline: 20px;
+  max-width: 54rem;
+  margin: 0.55rem auto 0;
+  padding-inline: 1.25rem;
   text-align: center;
-  font-size: 11px;
+  font-size: 0.9375rem;
   color: var(--text-3);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 40rem) {
   .topbar-inner,
   .thread-inner,
   .composer-inner,
   .disclaimer {
-    padding-inline: 14px;
+    padding-inline: 0.9rem;
+  }
+
+  .topbar-inner {
+    gap: 0.6rem;
   }
 
   .brand-text small {
     display: none;
+  }
+
+  .controls {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .draft-main {
@@ -740,7 +824,7 @@
 
   .draft-figure img {
     width: 100%;
-    max-height: 190px;
+    max-height: 12rem;
     object-fit: cover;
   }
 
@@ -762,6 +846,21 @@
   }
 
   .welcome {
-    padding-top: 28px;
+    padding-top: 1.6rem;
+  }
+
+  .chip {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .send-btn span {
+    display: none;
+  }
+
+  .send-btn {
+    width: var(--tap);
+    padding: 0;
+    justify-content: center;
   }
 }

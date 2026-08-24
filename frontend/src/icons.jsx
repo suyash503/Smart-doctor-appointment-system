@@ -77,3 +77,41 @@ export function ImageIcon(props) {
     </svg>
   )
 }
+
+export function CalendarIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" {...base} {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2.5" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </svg>
+  )
+}
+
+export function StethoscopeIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" {...base} {...props}>
+      <path d="M6 3v5a4 4 0 0 0 8 0V3" />
+      <path d="M4 3h3M13 3h3" />
+      <path d="M10 12v3a5 5 0 0 0 10 0v-1" />
+      <circle cx="20" cy="10" r="2" />
+    </svg>
+  )
+}
+
+export function CameraIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" {...base} {...props}>
+      <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.9l1.3-2h6.6l1.3 2h1.9A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-9Z" />
+      <circle cx="12" cy="13" r="3.4" />
+    </svg>
+  )
+}
+
+export function TextSizeIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" {...base} {...props}>
+      <path d="M3 19 8.5 5l5.5 14M4.8 15h7.4" />
+      <path d="M15 19l3.5-9 3.5 9M16.2 16.6h4.6" />
+    </svg>
+  )
+}
