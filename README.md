@@ -16,6 +16,7 @@ This project implements a true Agentic Loop, where an LLM is granted autonomous 
 * **Database:** SQLite with SQLAlchemy ORM.
 * **Data Validation:** Pydantic schemas ensure the LLM cannot hallucinate or inject malformed data into the database.
 * **AI Agent:** Groq API. `openai/gpt-oss-120b` for reasoning and tool calling, `qwen/qwen3.6-27b` for reading uploaded photos.
+* **Voice:** Deepgram for speech-to-text and text-to-speech only. The turn taking, interruption handling and tool loop between them are this project's, not a turnkey voice agent API.
 * **Memory:** Multi-turn conversational memory persisted via session IDs.
 
 ### How the pieces fit
@@ -26,12 +27,14 @@ backend/
   mcp_client.py     stdio client the API uses to reach that server
   services.py       booking, records, prescriptions and photo-draft logic
   extraction.py     reads medicines and conditions out of an image
+  agent.py          the agent loop: Groq, the MCP tools, and a streaming variant
   chat.py           chat endpoint, discovers its tools from the MCP server
+  voice.py          the /voice websocket: speech in, agent, speech out
   main.py           FastAPI app the frontend talks to
-frontend/           React chat UI
+frontend/           React chat UI, plus voice.js for the microphone and playback
 ```
 
-All domain logic lives in `services.py` and has exactly two callers: the MCP tools and the HTTP routes. Neither keeps its own copy, so the two can't drift apart.
+All domain logic lives in `services.py` and has exactly three callers: the MCP tools, the HTTP routes and voice. Neither keeps its own copy, so they can't drift apart. The agent loop follows the same rule: `agent.py` has one implementation and both the chat endpoint and the voice socket use it.
 
 ## ⚡ Features
 * **Natural Language Processing:** Users can type complex requests (e.g., "I need to see Dr. House tomorrow at 10 AM for a severe headache").
@@ -40,6 +43,7 @@ All domain logic lives in `services.py` and has exactly two callers: the MCP too
 * **Medical History & Prescriptions:** Patients record conditions, allergies, surgeries and medications. The agent checks allergies and current medicines before answering anything treatment-adjacent.
 * **Photo Extraction:** Photograph a prescription and have the medicines, conditions and allergies read out of it — behind a confirmation step (see below).
 * **Multi-Turn Memory:** The agent remembers previous context within the same session.
+* **Talk To It:** Press the microphone and speak. Replies are spoken back sentence by sentence as they stream, so the answer starts before it is finished, and talking over the assistant stops it mid-sentence. Recognition is biased towards the medicines already on the patient's record, which is where general speech models otherwise fail. Typing always works too.
 * **Strict Schema Enforcement:** Backend refuses any AI requests that do not match the strict Pydantic database models, and rejects double-booking a doctor.
 
 ## 🧰 MCP Tools
@@ -150,6 +154,18 @@ To run this project locally with full Google Calendar integration:
    DATABASE_URL=sqlite:///./health_assistant.db
    ALLOWED_ORIGINS=http://localhost:5173
    ```
+
+   Voice needs a Deepgram key as well. Without it the rest of the app works and
+   the microphone button reports that speech is not set up:
+
+   ```
+   DEEPGRAM_API_KEY=your-key
+   DEEPGRAM_STT_MODEL=nova-3-medical
+   DEEPGRAM_TTS_MODEL=aura-2-thalia-en
+   ```
+
+   The browser never talks to Deepgram directly, so the key stays on the server.
+   Voice also needs the host to allow websockets, which some free tiers do not.
 
 3. **Frontend Setup:**
    ```bash
