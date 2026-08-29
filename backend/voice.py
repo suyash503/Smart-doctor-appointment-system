@@ -37,7 +37,8 @@ VOICE_INSTRUCTIONS = (
     "there are and offer to go through them."
 )
 
-FILLER_PHRASE = "Let me check that for you."
+FILLER_PHRASE = "One moment."
+FILLER_AFTER_SECONDS = 0.6
 
 SENTENCE_END = re.compile(r"[.!?]\s+")
 WORD_BREAK = re.compile(r"[\s(\"']")
@@ -127,7 +128,11 @@ class VoiceSession:
         self.accept_audio = False
         self.cleared = asyncio.Event()
         self.heard_at = None
-        self.metrics = {}
+        self.metrics = None
+        self.pending_flushes = 0
+        self.turn_finished = False
+        self.spoke_in_turn = False
+        self.filler = None
 
     async def tell(self, payload):
         try:
@@ -142,6 +147,14 @@ class VoiceSession:
         self.tts = await websockets.connect(
             tts_url(), additional_headers=deepgram_headers()
         )
+
+    async def warm_up(self):
+        if self.tts is None:
+            return
+
+        self.accept_audio = False
+        await self.tts.send(json.dumps({"type": "Speak", "text": "Hello."}))
+        await self.tts.send(json.dumps({"type": "Flush"}))
 
     async def close_streams(self):
         for stream in (self.stt, self.tts):
@@ -222,7 +235,12 @@ class VoiceSession:
             return
 
         self.turn.cancel()
+        if self.filler is not None:
+            self.filler.cancel()
         self.accept_audio = False
+        self.metrics = None
+        self.pending_flushes = 0
+        self.turn_finished = False
         await self.clear_tts()
         await self.tell({"type": "interrupted"})
 
@@ -243,18 +261,41 @@ class VoiceSession:
             return
 
         self.accept_audio = True
+        self.spoke_in_turn = True
+        self.pending_flushes += 1
         await self.tts.send(json.dumps({"type": "Speak", "text": text}))
+        await self.tts.send(json.dumps({"type": "Flush"}))
 
-    async def flush_tts(self):
-        if self.tts is not None:
-            await self.tts.send(json.dumps({"type": "Flush"}))
+    async def fill_silence(self):
+        await asyncio.sleep(FILLER_AFTER_SECONDS)
+
+        if self.spoke_in_turn or self.turn_finished or self.metrics is None:
+            return
+
+        await self.speak(FILLER_PHRASE)
+
+    async def finish_turn(self):
+        self.turn_finished = True
+
+        if self.pending_flushes == 0:
+            await self.end_of_speech()
+
+    async def end_of_speech(self):
+        if self.metrics is None:
+            return
+
+        self.metrics["spoken_ms"] = round((time.perf_counter() - self.heard_at) * 1000)
+        logger.info("voice turn %s %s", self.session_id, self.metrics)
+        self.metrics = None
+        self.turn_finished = False
+        await self.tell({"type": "audio_end"})
 
     async def pump_tts(self):
         async for raw in self.tts:
             if isinstance(raw, bytes):
                 if not self.accept_audio:
                     continue
-                if self.heard_at is not None and "first_audio_ms" not in self.metrics:
+                if self.metrics is not None and "first_audio_ms" not in self.metrics:
                     self.metrics["first_audio_ms"] = round(
                         (time.perf_counter() - self.heard_at) * 1000
                     )
@@ -267,15 +308,22 @@ class VoiceSession:
             if kind == "Cleared":
                 self.cleared.set()
             elif kind == "Flushed":
-                await self.tell({"type": "audio_end"})
+                if self.metrics is None:
+                    continue
+                self.pending_flushes = max(0, self.pending_flushes - 1)
+                if self.pending_flushes == 0 and self.turn_finished:
+                    await self.end_of_speech()
             elif kind == "Warning":
                 logger.warning("Deepgram speech warning: %s", event.get("description"))
 
     async def run_turn(self, spoken, heard_at):
         self.heard_at = heard_at
         self.metrics = {}
+        self.pending_flushes = 0
+        self.turn_finished = False
+        self.spoke_in_turn = False
+        self.filler = asyncio.create_task(self.fill_silence())
         buffer = ""
-        said_anything = False
 
         await self.tell({"type": "reply_start"})
 
@@ -295,31 +343,27 @@ class VoiceSession:
                         sentences, buffer = split_sentences(buffer)
                         for sentence in sentences:
                             await self.speak(sentence)
-                            said_anything = True
                         if sentences:
                             await self.tell(
                                 {"type": "reply_chunk", "text": " ".join(sentences)}
                             )
                     elif event["type"] == "tool":
                         await self.tell({"type": "tool", "name": event["name"]})
-                        if not said_anything:
-                            await self.speak(FILLER_PHRASE)
-                            said_anything = True
                     elif event["type"] == "done":
                         if buffer.strip():
                             await self.speak(buffer)
                             await self.tell({"type": "reply_chunk", "text": buffer})
-                        await self.flush_tts()
                         await self.tell({"type": "reply", "text": event["reply"]})
         except asyncio.CancelledError:
             raise
         except Exception as error:
             logger.exception("Voice turn failed")
+            self.metrics = None
             await self.tell({"type": "error", "message": str(error)})
             return
 
-        self.metrics["turn_ms"] = round((time.perf_counter() - heard_at) * 1000)
-        logger.info("voice turn %s %s", self.session_id, self.metrics)
+        self.metrics["agent_ms"] = round((time.perf_counter() - heard_at) * 1000)
+        await self.finish_turn()
 
 
 async def keyterms_for(patient_id):
@@ -370,6 +414,7 @@ async def voice_socket(websocket: WebSocket):
         await websocket.close()
         return
 
+    await session.warm_up()
     await session.tell(
         {"type": "ready", "sample_rate": TTS_SAMPLE_RATE, "keyterms": len(keyterms)}
     )
