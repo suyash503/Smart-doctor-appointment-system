@@ -796,6 +796,76 @@
   color: var(--text-3);
 }
 
+.voice-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  max-width: 54rem;
+  margin: 0 auto 0.55rem;
+  padding: 0.55rem 1.25rem;
+  font-size: 1rem;
+  color: var(--text-2);
+}
+
+.voice-strip strong {
+  font-weight: 550;
+  color: var(--text);
+}
+
+.voice-heard {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+  color: var(--text-3);
+}
+
+.voice-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex-shrink: 0;
+}
+
+.voice-strip.is-listening .voice-dot {
+  background: var(--brand);
+  animation: voice-pulse 1.6s ease-in-out infinite;
+}
+
+.voice-strip.is-speaking .voice-dot {
+  background: var(--warn);
+}
+
+.voice-strip.is-thinking .voice-dot {
+  background: var(--brand);
+  opacity: 0.5;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-strip.is-listening .voice-dot {
+    animation: none;
+  }
+}
+
+.icon-btn.on {
+  background: var(--brand);
+  color: #fff;
+}
+
+.icon-btn.on:hover:not(:disabled) {
+  background: var(--brand-hover);
+  color: #fff;
+}
+
 .disclaimer {
   max-width: 54rem;
   margin: 0.55rem auto 0;

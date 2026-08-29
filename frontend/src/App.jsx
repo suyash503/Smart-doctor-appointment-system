@@ -7,13 +7,16 @@ import {
   CalendarIcon,
   CameraIcon,
   LogoMark,
+  MicIcon,
   PaperclipIcon,
   PillIcon,
   SendIcon,
   StethoscopeIcon,
+  StopIcon,
   TextSizeIcon,
 } from './icons'
 import { confirmDraft, discardDraft, listPendingDrafts, sendChat, uploadPhoto } from './api'
+import { VoiceLink } from './voice'
 
 const SUGGESTIONS = [
   { text: 'Which doctors can I see?', Icon: StethoscopeIcon },
@@ -21,6 +24,13 @@ const SUGGESTIONS = [
   { text: 'What medicines am I taking?', Icon: PillIcon },
   { text: 'Book me a check-up next week', Icon: CalendarIcon },
 ]
+
+const VOICE_LABELS = {
+  starting: 'Turning the microphone on…',
+  listening: 'Listening — just start talking',
+  thinking: 'Thinking…',
+  speaking: 'Speaking — talk over me to interrupt',
+}
 
 const TEXT_SIZES = [
   { id: 'normal', label: 'Normal', root: '100%' },
@@ -47,9 +57,14 @@ function App() {
 
   const [sessionId] = useState(() => `session_${Math.random().toString(36).substring(2, 9)}`)
 
+  const [voiceStatus, setVoiceStatus] = useState('off')
+  const [heard, setHeard] = useState('')
+  const [liveReply, setLiveReply] = useState('')
+
   const endRef = useRef(null)
   const fileRef = useRef(null)
   const textareaRef = useRef(null)
+  const voiceRef = useRef(null)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -68,6 +83,66 @@ function App() {
   const say = useCallback((content, role = 'assistant') => {
     setMessages((prev) => [...prev, { role, content }])
   }, [])
+
+  useEffect(() => {
+    const link = new VoiceLink({
+      ready: () => setVoiceStatus('listening'),
+      transcript: ({ text, final }) => {
+        if (!final) {
+          setHeard(text)
+          return
+        }
+        setHeard('')
+        say(text, 'user')
+      },
+      reply_start: () => {
+        setVoiceStatus('thinking')
+        setLiveReply('')
+      },
+      reply_chunk: ({ text }) => setLiveReply((prev) => (prev ? `${prev} ${text}` : text)),
+      speaking: () => setVoiceStatus('speaking'),
+      reply: ({ text }) => {
+        setLiveReply('')
+        say(text)
+      },
+      interrupted: () => {
+        setLiveReply('')
+        setVoiceStatus('listening')
+      },
+      audio_end: () => setVoiceStatus('listening'),
+      error: ({ message }) => say(message),
+      closed: () => setVoiceStatus('off'),
+    })
+
+    voiceRef.current = link
+
+    return () => {
+      link.stop()
+      voiceRef.current = null
+    }
+  }, [say])
+
+  const toggleVoice = async () => {
+    const link = voiceRef.current
+    if (!link) return
+
+    if (link.active) {
+      await link.stop()
+      setVoiceStatus('off')
+      setHeard('')
+      setLiveReply('')
+      return
+    }
+
+    setVoiceStatus('starting')
+
+    try {
+      await link.start(sessionId, patientId)
+    } catch (error) {
+      setVoiceStatus('off')
+      say(`I could not turn on the microphone. ${error.message}`)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -95,6 +170,14 @@ function App() {
   const ask = async (text) => {
     const question = text.trim()
     if (!question || isLoading) return
+
+    const link = voiceRef.current
+    if (link && link.active) {
+      setInput('')
+      requestAnimationFrame(grow)
+      link.say(question)
+      return
+    }
 
     say(question, 'user')
     setInput('')
@@ -258,6 +341,10 @@ function App() {
 
           {isLoading && <Message role="assistant" pending />}
 
+          {voiceStatus === 'thinking' && !liveReply && <Message role="assistant" pending />}
+
+          {liveReply && <Message role="assistant" content={liveReply} />}
+
           {draft && (
             <PhotoDraft
               key={draft.id}
@@ -273,6 +360,14 @@ function App() {
       </main>
 
       <footer className="composer">
+        {voiceStatus !== 'off' && (
+          <div className={`voice-strip is-${voiceStatus}`} role="status" aria-live="polite">
+            <span className="voice-dot" aria-hidden="true" />
+            <strong>{VOICE_LABELS[voiceStatus]}</strong>
+            {heard && <span className="voice-heard">{heard}</span>}
+          </div>
+        )}
+
         <form className="composer-inner" onSubmit={onSubmit}>
           <input
             ref={fileRef}
@@ -281,6 +376,21 @@ function App() {
             onChange={handleFile}
             hidden
           />
+
+          <button
+            type="button"
+            className={voiceStatus === 'off' ? 'icon-btn' : 'icon-btn on'}
+            title={voiceStatus === 'off' ? 'Talk to the assistant' : 'Stop talking'}
+            aria-label={voiceStatus === 'off' ? 'Talk to the assistant' : 'Stop talking'}
+            aria-pressed={voiceStatus !== 'off'}
+            onClick={toggleVoice}
+          >
+            {voiceStatus === 'off' ? (
+              <MicIcon width="22" height="22" />
+            ) : (
+              <StopIcon width="22" height="22" />
+            )}
+          </button>
 
           <button
             type="button"
