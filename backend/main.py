@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import chat
+import voice
 from core.config import ALLOWED_ORIGINS
 from database.database import Base, engine
 from mcp_client import toolbox
@@ -45,6 +46,7 @@ app.include_router(querying.router)
 app.include_router(records.router)
 app.include_router(photos.router)
 app.include_router(chat.router)
+app.include_router(voice.router)
 
 
 @app.get("/")

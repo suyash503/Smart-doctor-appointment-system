@@ -233,6 +233,29 @@ def stop_prescription(db: Session, prescription_id: int, ended_on=None):
     return commit(db, prescription)
 
 
+def speech_keyterms(db: Session, patient_id: int, limit: int = 40):
+    terms = []
+
+    for prescription in list_prescriptions(db, patient_id):
+        if prescription.medication:
+            terms.append(prescription.medication)
+
+    for record in list_medical_records(db, patient_id):
+        if record.title:
+            terms.append(record.title)
+
+    seen = set()
+    unique = []
+    for term in terms:
+        cleaned = term.strip()
+        key = cleaned.lower()
+        if cleaned and key not in seen:
+            seen.add(key)
+            unique.append(cleaned)
+
+    return unique[:limit]
+
+
 def describe_record(record):
     line = f"- {record.recorded_on:%Y-%m-%d} {record.title} ({record.category})"
     if record.details:

@@ -13,6 +13,13 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.6-27b")
 
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+DEEPGRAM_STT_MODEL = os.getenv("DEEPGRAM_STT_MODEL", "nova-3-medical")
+DEEPGRAM_TTS_MODEL = os.getenv("DEEPGRAM_TTS_MODEL", "aura-2-thalia-en")
+TTS_SAMPLE_RATE = int(os.getenv("TTS_SAMPLE_RATE", 24000))
+ENDPOINTING_MS = int(os.getenv("ENDPOINTING_MS", 300))
+UTTERANCE_END_MS = int(os.getenv("UTTERANCE_END_MS", 1000))
+
 DEFAULT_ORIGINS = [
     "http://localhost:5173",
     "https://smart-doctor-ai.vercel.app",

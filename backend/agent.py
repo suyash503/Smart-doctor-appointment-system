@@ -51,13 +51,21 @@ def remember(db: Session, session_id: str, role: str, content: str):
     db.commit()
 
 
-def build_conversation(db: Session, session_id: str, message: str, patient_id: Optional[int]):
+def build_conversation(
+    db: Session,
+    session_id: str,
+    message: str,
+    patient_id: Optional[int],
+    extra_instructions: str = "",
+):
     system_prompt = SYSTEM_PROMPT
     if patient_id:
         system_prompt += (
             f" You are speaking to patient {patient_id}, so use that id with your "
             "tools instead of asking for it."
         )
+    if extra_instructions:
+        system_prompt += f" {extra_instructions}"
 
     conversation = [{"role": "system", "content": system_prompt}]
     conversation.extend(load_history(db, session_id))
@@ -140,9 +148,13 @@ def assistant_message(content, tool_calls):
 
 
 async def run_turn_stream(
-    db: Session, session_id: str, message: str, patient_id: Optional[int] = None
+    db: Session,
+    session_id: str,
+    message: str,
+    patient_id: Optional[int] = None,
+    extra_instructions: str = "",
 ):
-    conversation = build_conversation(db, session_id, message, patient_id)
+    conversation = build_conversation(db, session_id, message, patient_id, extra_instructions)
     remember(db, session_id, "user", message)
 
     try:
@@ -191,10 +203,16 @@ async def run_turn_stream(
     yield {"type": "done", "reply": reply}
 
 
-async def run_turn(db: Session, session_id: str, message: str, patient_id: Optional[int] = None):
+async def run_turn(
+    db: Session,
+    session_id: str,
+    message: str,
+    patient_id: Optional[int] = None,
+    extra_instructions: str = "",
+):
     reply = ""
 
-    async for event in run_turn_stream(db, session_id, message, patient_id):
+    async for event in run_turn_stream(db, session_id, message, patient_id, extra_instructions):
         if event["type"] == "done":
             reply = event["reply"]
 
