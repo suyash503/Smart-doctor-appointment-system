@@ -127,6 +127,7 @@ export class VoiceLink {
     this.node = null
     this.speaker = new Speaker()
     this.workletUrl = null
+    this.lastError = null
   }
 
   emit(name, payload) {
@@ -140,6 +141,8 @@ export class VoiceLink {
 
   async start(sessionId, patientId) {
     if (this.socket) return
+
+    this.lastError = null
 
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -185,12 +188,16 @@ export class VoiceLink {
         this.speaker.flush()
         this.emit('interrupted')
       } else {
+        if (payload.type === 'error') this.lastError = payload.message
         this.emit(payload.type, payload)
       }
     }
 
     this.socket.onerror = () => this.emit('error', { message: 'The voice connection failed.' })
-    this.socket.onclose = () => this.emit('closed')
+    this.socket.onclose = () => {
+      const reason = this.lastError
+      this.stop().finally(() => this.emit('closed', { reason }))
+    }
   }
 
   listen() {

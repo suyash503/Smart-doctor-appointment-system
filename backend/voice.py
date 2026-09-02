@@ -39,6 +39,11 @@ VOICE_INSTRUCTIONS = (
 
 FILLER_PHRASE = "One moment."
 FILLER_AFTER_SECONDS = 0.6
+KEEPALIVE_SECONDS = 4
+
+DROPPED_MESSAGE = (
+    "The speech connection dropped. Turn the microphone back on to keep talking."
+)
 
 SENTENCE_END = re.compile(r"[.!?]\s+")
 WORD_BREAK = re.compile(r"[\s(\"']")
@@ -185,6 +190,11 @@ class VoiceSession:
                 self.start_turn(typed, time.perf_counter())
             elif kind == "interrupt":
                 await self.barge_in()
+
+    async def pump_keepalive(self):
+        while True:
+            await asyncio.sleep(KEEPALIVE_SECONDS)
+            await self.stt.send(json.dumps({"type": "KeepAlive"}))
 
     async def pump_stt(self):
         async for raw in self.stt:
@@ -423,6 +433,7 @@ async def voice_socket(websocket: WebSocket):
         asyncio.create_task(session.pump_client()),
         asyncio.create_task(session.pump_stt()),
         asyncio.create_task(session.pump_tts()),
+        asyncio.create_task(session.pump_keepalive()),
     ]
 
     try:
@@ -431,6 +442,7 @@ async def voice_socket(websocket: WebSocket):
             error = task.exception()
             if error and not isinstance(error, WebSocketDisconnect):
                 logger.error("Voice session ended: %s", error)
+                await session.tell({"type": "error", "message": DROPPED_MESSAGE})
     finally:
         for task in pumps:
             task.cancel()

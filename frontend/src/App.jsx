@@ -111,7 +111,12 @@ function App() {
       },
       audio_end: () => setVoiceStatus('listening'),
       error: ({ message }) => say(message),
-      closed: () => setVoiceStatus('off'),
+      closed: ({ reason }) => {
+        setVoiceStatus('off')
+        setHeard('')
+        setLiveReply('')
+        if (!reason) say('The microphone was disconnected. Press it again to carry on.')
+      },
     })
 
     voiceRef.current = link
