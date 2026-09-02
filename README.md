@@ -43,8 +43,36 @@ All domain logic lives in `services.py` and has exactly three callers: the MCP t
 * **Medical History & Prescriptions:** Patients record conditions, allergies, surgeries and medications. The agent checks allergies and current medicines before answering anything treatment-adjacent.
 * **Photo Extraction:** Photograph a prescription and have the medicines, conditions and allergies read out of it — behind a confirmation step (see below).
 * **Multi-Turn Memory:** The agent remembers previous context within the same session.
-* **Talk To It:** Press the microphone and speak. Replies are spoken back sentence by sentence as they stream, so the answer starts before it is finished, and talking over the assistant stops it mid-sentence. Recognition is biased towards the medicines already on the patient's record, which is where general speech models otherwise fail. Typing always works too.
+* **Talk To It:** Press the microphone and speak. Replies are spoken back sentence by sentence as they stream, so the answer starts before it is finished, and talking over the assistant stops it mid-sentence. Recognition is biased towards the medicines already on the patient's record. Typing always works too.
 * **Strict Schema Enforcement:** Backend refuses any AI requests that do not match the strict Pydantic database models, and rejects double-booking a doctor.
+
+## 🎙️ Voice, measured
+
+Numbers from this machine, not estimates. Each turn needed a tool call.
+
+| | |
+| --- | --- |
+| Final transcript to first audio | 1.30s, 1.32s, 1.30s |
+| Same, before the streaming work | 2.58s, 3.18s |
+| Groq first token | 1.4s to 3.0s |
+
+The gap between those last two rows is the whole point. A holding phrase
+starts after 600ms of silence and each sentence is flushed to speech as it is
+written, so what the patient waits for is speech synthesis, not the model. One
+turn took Groq 3.0s to produce its first token and still spoke at 1.40s.
+
+Recognition uses `nova-3-medical`, biased with the patient's own medicine names.
+On clean audio that changes nothing, because the medical model already knows the
+common drugs. It matters once the audio degrades:
+
+| | without keyterms | with keyterms |
+| --- | --- | --- |
+| clean | empagliflozin, hydrochlorothiazide, rosuvastatin | same |
+| with noise | "ampicillin" | "empagliflozin" |
+
+The failure without biasing is not gibberish, it is a different real drug, which
+is the sort of mistake worth engineering against. Every write is still read back
+for confirmation before it happens.
 
 ## 🧰 MCP Tools
 
